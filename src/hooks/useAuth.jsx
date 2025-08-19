@@ -30,11 +30,34 @@ export function useAuth() {
     }
   }, []);
 
+  const loginWithGithub = useCallback(async (code, installationId) => {
+    setError(null);
+    try {
+      const res = await fetch(`${BACKEND}/api/auth/github-login/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(
+          installationId ? { code, installation_id: Number(installationId) } : { code }
+        ),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.detail || `Status ${res.status}`);
+      }
+      const data = await res.json();
+      if (!data.access) throw new Error("No access token returned");
+      localStorage.setItem(STORAGE_KEY, data.access);
+      setAccessToken(data.access);
+    } catch (e) {
+      setError(e.message);
+    }
+  }, []);
+
   const logout = useCallback(() => {
     localStorage.removeItem(STORAGE_KEY);
     setAccessToken(null);
     setError(null);
   }, []);
 
-  return { accessToken, error, loginWithGoogle, logout, clearError: () => setError(null) };
+  return { accessToken, error, loginWithGoogle, loginWithGithub, logout, clearError: () => setError(null) };
 }
